@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options w/ dad - Payoff Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+            color: #333;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 30px;
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        canvas {
+            max-height: 400px;
+        }
+        .positions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .positions-table th {
+            background-color: #5a67d8;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: normal;
+            border: 1px solid #4c51bf;
+        }
+        .positions-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            background-color: white;
+        }
+        .positions-table tr:first-child th:first-child {
+            background-color: #4c51bf;
+        }
+        .row-label {
+            background-color: #5a67d8 !important;
+            color: white;
+            font-weight: bold;
+            text-align: left !important;
+            padding-left: 15px !important;
+            border: 1px solid #4c51bf !important;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+        select {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+        .pl-display {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #edf2f7;
+            border-radius: 4px;
+            color: #2d3748;
+        }
+        .instructions {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f7fafc;
+            border-radius: 4px;
+            border-left: 4px solid #5a67d8;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #2d3748;
+        }
+        .instructions ul {
+            line-height: 1.8;
+        }
+        .debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fee;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Options w/ dad - Interactive Payoff Diagram</h1>
+        
+        <div class="chart-container">
+            <canvas id="payoffChart"></canvas>
+        </div>
+        
+        <div class="pl-display" id="plDisplay">
+            Hover over the chart to see P/L at different stock prices
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 10px;">
+            <button onclick="resetAllPositions()" style="padding: 8px 20px; background-color: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Reset All Positions</button>
+        </div>
+        
+        <table class="positions-table">
+            <tr>
+                <th style="width: 120px;">Position</th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+                <th>Stock</th>
+            </tr>
+            <tr>
+                <td class="row-label">Quantity</td>
+                <td><input type="number" id="qty-1" value="" step="1" tabindex="1" onchange="updateChart()"></td>
+                <td><input type="number" id="qty-2" value="" step="1" tabindex="5" onchange="updateChart()"></td>
+                <td><input type="number" id="qty-3" value="" step="1" tabindex="9" onchange="updateChart()"></td>
+                <td><input type="number" id="qty-4" value="" step="1" tabindex="13" onchange="updateChart()"></td>
+                <td><input type="number" id="qty-5" value="" step="1" tabindex="17" onchange="updateChart()"></td>
+                <td><input type="number" id="qty-stock" value="" step="100" tabindex="21" onchange="updateChart()"></td>
+            </tr>
+            <tr>
+                <td class="row-label">Price</td>
+                <td><input type="number" id="price-1" value="" step="0.5" min="0" tabindex="2" onchange="updateChart()"></td>
+                <td><input type="number" id="price-2" value="" step="0.5" min="0" tabindex="6" onchange="updateChart()"></td>
+                <td><input type="number" id="price-3" value="" step="0.5" min="0" tabindex="10" onchange="updateChart()"></td>
+                <td><input type="number" id="price-4" value="" step="0.5" min="0" tabindex="14" onchange="updateChart()"></td>
+                <td><input type="number" id="price-5" value="" step="0.5" min="0" tabindex="18" onchange="updateChart()"></td>
+                <td><input type="number" id="price-stock" value="" step="1" min="0" tabindex="22" onchange="updateChart()"></td>
+            </tr>
+            <tr>
+                <td class="row-label">Strike Price</td>
+                <td><input type="number" id="strike-1" value="" step="5" min="0" tabindex="3" onchange="updateChart()"></td>
+                <td><input type="number" id="strike-2" value="" step="5" min="0" tabindex="7" onchange="updateChart()"></td>
+                <td><input type="number" id="strike-3" value="" step="5" min="0" tabindex="11" onchange="updateChart()"></td>
+                <td><input type="number" id="strike-4" value="" step="5" min="0" tabindex="15" onchange="updateChart()"></td>
+                <td><input type="number" id="strike-5" value="" step="5" min="0" tabindex="19" onchange="updateChart()"></td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td class="row-label">C/P</td>
+                <td>
+                    <select id="type-1" tabindex="4" onchange="updateChart()">
+                        <option value="">-</option>
+                        <option value="Call">Call</option>
+                        <option value="Put">Put</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="type-2" tabindex="8" onchange="updateChart()">
+                        <option value="">-</option>
+                        <option value="Call">Call</option>
+                        <option value="Put">Put</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="type-3" tabindex="12" onchange="updateChart()">
+                        <option value="">-</option>
+                        <option value="Call">Call</option>
+                        <option value="Put">Put</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="type-4" tabindex="16" onchange="updateChart()">
+                        <option value="">-</option>
+                        <option value="Call">Call</option>
+                        <option value="Put">Put</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="type-5" tabindex="20" onchange="updateChart()">
+                        <option value="">-</option>
+                        <option value="Call">Call</option>
+                        <option value="Put">Put</option>
+                    </select>
+                </td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td class="row-label">Reset</td>
+                <td><button onclick="resetPosition(1)" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+                <td><button onclick="resetPosition(2)" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+                <td><button onclick="resetPosition(3)" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+                <td><button onclick="resetPosition(4)" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+                <td><button onclick="resetPosition(5)" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+                <td><button onclick="resetStock()" style="padding: 4px 12px; background-color: #718096; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button></td>
+            </tr>
+        </table>
+        
+        <div class="instructions">
+            <h3>Instructions & Examples:</h3>
+            <ul>
+                <li><strong>Quantity:</strong> Positive = Buy (Long), Negative = Sell (Short). Each option = 100 shares</li>
+                <li><strong>Hockey Stick (Long Call):</strong> Position 1: Qty=1, Price=$5, Strike=$50, C/P=Call</li>
+                <li><strong>Long Put:</strong> Position 1: Qty=1, Price=$5, Strike=$50, C/P=Put</li>
+                <li><strong>Synthetic Stock:</strong> Position 1: Call, Qty=1, Price=$5, Strike=$50 + Position 2: Put, Qty=-1, Price=$5, Strike=$50</li>
+                <li><strong>Covered Call:</strong> Stock: Qty=100, Price=$50 + Position 1: Call, Qty=-1, Price=$2, Strike=$60</li>
+                <li><strong>Box Spread:</strong> Create using calls and puts at different strikes (e.g., 60 and 70)</li>
+            </ul>
+        </div>
+        
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        let myChart = null;
+        
+        function resetPosition(positionNum) {
+            document.getElementById(`qty-${positionNum}`).value = '';
+            document.getElementById(`price-${positionNum}`).value = '';
+            document.getElementById(`strike-${positionNum}`).value = '';
+            document.getElementById(`type-${positionNum}`).value = '';
+            updateChart();
+        }
+        
+        function resetStock() {
+            document.getElementById('qty-stock').value = '';
+            document.getElementById('price-stock').value = '';
+            updateChart();
+        }
+        
+        function resetAllPositions() {
+            // Reset all option positions
+            for (let i = 1; i <= 5; i++) {
+                resetPosition(i);
+            }
+            // Reset stock position
+            resetStock();
+        }
+        
+        function calculateOptionPayoff(type, quantity, premium, strike, stockPrice) {
+            const multiplier = 100;
+            let intrinsicValue = 0;
+            
+            if (type === 'Call') {
+                intrinsicValue = Math.max(0, stockPrice - strike);
+            } else if (type === 'Put') {
+                intrinsicValue = Math.max(0, strike - stockPrice);
+            }
+            
+            // P/L = (Intrinsic Value - Premium) * Quantity * Multiplier
+            return quantity * multiplier * (intrinsicValue - premium);
+        }
+        
+        function calculateStockPayoff(quantity, purchasePrice, currentPrice) {
+            return quantity * (currentPrice - purchasePrice);
+        }
+        
+        function updateChart() {
+            console.log('updateChart() called');
+            
+            try {
+                const stockPrices = [];
+                const payoffs = [];
+                let hasActivePositions = false;
+                
+                // Generate stock prices from 0 to 100
+                for (let i = 0; i <= 100; i++) {
+                    stockPrices.push(i);
+                    
+                    let totalPL = 0;
+                    
+                    // Calculate option payoffs for positions 1-5
+                    for (let j = 1; j <= 5; j++) {
+                        const type = document.getElementById(`type-${j}`).value;
+                        const qty = parseFloat(document.getElementById(`qty-${j}`).value) || 0;
+                        const price = parseFloat(document.getElementById(`price-${j}`).value) || 0;
+                        const strike = parseFloat(document.getElementById(`strike-${j}`).value) || 50;
+                        
+                        if (type && qty !== 0) {
+                            hasActivePositions = true;
+                            const pl = calculateOptionPayoff(type, qty, price, strike, i);
+                            totalPL += pl;
+                            console.log(`Position ${j}: ${type} qty=${qty} price=${price} strike=${strike} stockPrice=${i} PL=${pl}`);
+                        }
+                    }
+                    
+                    // Calculate stock payoff
+                    const stockQty = parseFloat(document.getElementById('qty-stock').value) || 0;
+                    const stockPurchasePrice = parseFloat(document.getElementById('price-stock').value) || 50;
+                    if (stockQty !== 0) {
+                        hasActivePositions = true;
+                        totalPL += calculateStockPayoff(stockQty, stockPurchasePrice, i);
+                    }
+                    
+                    payoffs.push(totalPL);
+                }
+                
+                console.log(`Generated ${payoffs.length} data points. Has active positions: ${hasActivePositions}`);
+                
+                // Calculate dynamic scale ranges
+                let minY = Math.min(...payoffs);
+                let maxY = Math.max(...payoffs);
+                
+                // If no active positions, set a default range
+                if (!hasActivePositions || (minY === 0 && maxY === 0)) {
+                    minY = -2;
+                    maxY = 2;
+                } else {
+                    // Add padding to the range
+                    const padding = Math.abs(maxY - minY) * 0.1;
+                    minY -= padding;
+                    maxY += padding;
+                }
+                
+                // Calculate appropriate step size for y-axis
+                // Always use multiples of 10s, 100s, 1000s, etc.
+                const range = maxY - minY;
+                let stepSize;
+                if (range <= 100) {
+                    stepSize = 10;
+                } else if (range <= 1000) {
+                    stepSize = 100;
+                } else if (range <= 10000) {
+                    stepSize = 1000;
+                } else if (range <= 100000) {
+                    stepSize = 10000;
+                } else {
+                    stepSize = 100000;
+                }
+                
+                // Round min and max to nearest step size
+                minY = Math.floor(minY / stepSize) * stepSize;
+                maxY = Math.ceil(maxY / stepSize) * stepSize;
+                
+                // Get chart context
+                const canvas = document.getElementById('payoffChart');
+                if (!canvas) {
+                    throw new Error('Canvas element not found');
+                }
+                
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    throw new Error('Could not get 2D context');
+                }
+                
+                // Destroy existing chart if it exists
+                if (myChart) {
+                    console.log('Destroying existing chart');
+                    myChart.destroy();
+                    myChart = null;
+                }
+                
+                // Find break-even points (where P/L crosses zero)
+                const breakEvenPoints = [];
+                
+                // Only calculate break-even points if there are active positions
+                if (hasActivePositions) {
+                    for (let i = 1; i < payoffs.length; i++) {
+                        const prevPL = payoffs[i - 1];
+                        const currPL = payoffs[i];
+                        
+                        // Check if P/L crosses zero between these two points
+                        if ((prevPL < 0 && currPL >= 0) || (prevPL > 0 && currPL <= 0)) {
+                            // Linear interpolation to find exact break-even price
+                            const exactPrice = stockPrices[i - 1] + (stockPrices[i] - stockPrices[i - 1]) * 
+                                              (0 - prevPL) / (currPL - prevPL);
+                            breakEvenPoints.push({
+                                x: exactPrice,
+                                y: 0
+                            });
+                        }
+                        
+                        // Also check if current point is exactly zero (but not in empty state)
+                        if (Math.abs(currPL) < 0.01 && (prevPL !== 0 || i === payoffs.length - 1)) {
+                            // Only add if it's not part of a continuous zero line
+                            let isIsolatedZero = false;
+                            if (i > 0 && i < payoffs.length - 1) {
+                                isIsolatedZero = Math.abs(payoffs[i - 1]) > 0.01 || Math.abs(payoffs[i + 1]) > 0.01;
+                            }
+                            if (isIsolatedZero) {
+                                breakEvenPoints.push({
+                                    x: stockPrices[i],
+                                    y: 0
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                console.log('Break-even points found:', breakEvenPoints);
+
+                // Create new chart
+                console.log('Creating new chart');
+                myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: stockPrices,
+                        datasets: [{
+                            label: 'P/L',
+                            data: payoffs,
+                            borderColor: '#5a67d8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 0,
+                            pointRadius: 2,
+                            pointHoverRadius: 5,
+                            showLine: false,
+                            tension: 0,
+                            fill: false,
+                            pointBackgroundColor: function(context) {
+                                const index = context.dataIndex;
+                                const value = context.parsed.y;
+                                
+                                // Check if this point is close to a break-even point
+                                for (const breakEven of breakEvenPoints) {
+                                    if (Math.abs(stockPrices[index] - breakEven.x) < 0.5) {
+                                        return '#f59e0b'; // Amber color for break-even points
+                                    }
+                                }
+                                return value >= 0 ? '#22c55e' : '#ef4444';
+                            },
+                            pointBorderColor: function(context) {
+                                const index = context.dataIndex;
+                                const value = context.parsed.y;
+                                
+                                // Check if this point is close to a break-even point
+                                for (const breakEven of breakEvenPoints) {
+                                    if (Math.abs(stockPrices[index] - breakEven.x) < 0.5) {
+                                        return '#d97706'; // Darker amber border for break-even points
+                                    }
+                                }
+                                return value >= 0 ? '#22c55e' : '#ef4444';
+                            },
+                            pointBorderWidth: 1
+                        },
+                        // Add a separate dataset for break-even indicators
+                        {
+                            label: 'Break-Even',
+                            data: breakEvenPoints,
+                            type: 'scatter',
+                            borderColor: '#f59e0b',
+                            backgroundColor: '#f59e0b',
+                            pointRadius: 2,
+                            pointHoverRadius: 12,
+                            pointBorderWidth: 3,
+                            pointBorderColor: '#d97706',
+                            showLine: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 10,
+                                right: 10,
+                                bottom: 10,
+                                left: 10
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            annotation: {
+                                annotations: breakEvenPoints.map((point, index) => ({
+                                    type: 'line',
+                                    id: `breakeven-${index}`,
+                                    mode: 'vertical',
+                                    scaleID: 'x',
+                                    value: point.x,
+                                    borderColor: '#f59e0b',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        content: `BE: $${point.x.toFixed(1)}`,
+                                        enabled: true,
+                                        position: 'top',
+                                        backgroundColor: '#f59e0b',
+                                        color: 'white',
+                                        font: {
+                                            size: 12,
+                                            weight: 'bold'
+                                        }
+                                    }
+                                }))
+                            },
+                            title: {
+                                display: true,
+                                text: 'P/L vs. Stock Price',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                display: true,
+                                labels: {
+                                    generateLabels: function(chart) {
+                                        const labels = [];
+                                        
+                                        // Add custom legend items
+                                        labels.push({
+                                            text: 'Profit (P/L > 0)',
+                                            fillStyle: '#22c55e',
+                                            strokeStyle: '#22c55e',
+                                            lineWidth: 0,
+                                            pointStyle: 'circle'
+                                        });
+                                        
+                                        labels.push({
+                                            text: 'Loss (P/L < 0)',
+                                            fillStyle: '#ef4444',
+                                            strokeStyle: '#ef4444',
+                                            lineWidth: 0,
+                                            pointStyle: 'circle'
+                                        });
+                                        
+                                        if (breakEvenPoints.length > 0) {
+                                            labels.push({
+                                                text: 'Break-Even (P/L = 0)',
+                                                fillStyle: '#f59e0b',
+                                                strokeStyle: '#d97706',
+                                                lineWidth: 3,
+                                                pointStyle: 'circle'
+                                            });
+                                        }
+                                        
+                                        return labels;
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const stockPrice = context.label;
+                                        const pl = Math.round(context.parsed.y);
+                                        
+                                        // Check if this is empty state
+                                        if (!hasActivePositions) {
+                                            document.getElementById('plDisplay').innerHTML = 
+                                                'Enter positions in the table below to see the payoff diagram';
+                                            return 'No positions entered';
+                                        }
+                                        
+                                        // Check if this is a break-even point
+                                        let isBreakEven = false;
+                                        if (context.datasetIndex === 1) {
+                                            // This is from the break-even dataset
+                                            isBreakEven = true;
+                                        } else {
+                                            // Check if regular point is near break-even
+                                            for (const breakEven of breakEvenPoints) {
+                                                if (Math.abs(parseFloat(stockPrice) - breakEven.x) < 0.5) {
+                                                    isBreakEven = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (isBreakEven) {
+                                            document.getElementById('plDisplay').innerHTML = 
+                                                `<span style="color: #f59e0b; font-weight: bold;">BREAK-EVEN POINT</span><br>Stock Price: $${stockPrice}<br>P/L: $0`;
+                                            return 'BREAK-EVEN: P/L = $0';
+                                        } else {
+                                            document.getElementById('plDisplay').innerHTML = 
+                                                `Stock Price: $${stockPrice}<br>P/L: $${pl.toLocaleString()}`;
+                                            return `P/L: $${pl.toLocaleString()}`;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Stock Price'
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                    drawTicks: true,
+                                    drawOnChartArea: true,
+                                    drawBorder: true,
+                                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                                    lineWidth: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 2; // Make zero line thicker
+                                        }
+                                        return 1;
+                                    },
+                                    color: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 'rgba(0, 0, 0, 0.3)'; // Make zero line darker
+                                        }
+                                        return 'rgba(0, 0, 0, 0.05)';
+                                    }
+                                },
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 5, // Always use multiples of 5
+                                    callback: function(value) {
+                                        return '$' + value;
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'P/L'
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                    drawTicks: true,
+                                    drawOnChartArea: true,
+                                    drawBorder: true,
+                                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                                    lineWidth: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 2; // Make zero line thicker
+                                        }
+                                        return 1;
+                                    },
+                                    color: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 'rgba(0, 0, 0, 0.3)'; // Make zero line darker
+                                        }
+                                        return 'rgba(0, 0, 0, 0.05)';
+                                    }
+                                },
+                                min: minY,
+                                max: maxY,
+                                ticks: {
+                                    stepSize: stepSize,
+                                    callback: function(value) {
+                                        if (value === 0) return '$0';
+                                        if (value < 0) {
+                                            if (Math.abs(value) < 1000) {
+                                                return '-$' + Math.abs(value);
+                                            }
+                                            return '-$' + Math.abs(value).toLocaleString();
+                                        } else {
+                                            if (value < 1000) {
+                                                return '$' + value;
+                                            }
+                                            return '$' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Debug info
+                const debugDiv = document.getElementById('debug');
+                debugDiv.style.display = 'none'; // Comment this line to see debug info
+                debugDiv.innerHTML = `Chart created successfully. Data points: ${payoffs.length}, First value: ${payoffs[0]?.toFixed(2)}, Last value: ${payoffs[100]?.toFixed(2)}`;
+                
+                console.log('Chart created successfully');
+                
+                // Update P/L display with break-even information
+                let displayText;
+                if (!hasActivePositions) {
+                    displayText = 'Enter positions in the table below to see the payoff diagram';
+                } else if (breakEvenPoints.length > 0) {
+                    displayText = 'Hover over the chart to see P/L at different stock prices';
+                    displayText += '<br><span style="color: #f59e0b; font-weight: bold;">Break-Even Points: ';
+                    displayText += breakEvenPoints.map(point => `$${point.x.toFixed(2)}`).join(', ');
+                    displayText += '</span>';
+                } else {
+                    displayText = 'Hover over the chart to see P/L at different stock prices';
+                }
+                document.getElementById('plDisplay').innerHTML = displayText;
+                
+            } catch (error) {
+                console.error('Error updating chart:', error);
+                console.error('Stack trace:', error.stack);
+                
+                const debugDiv = document.getElementById('debug');
+                debugDiv.style.display = 'block';
+                debugDiv.innerHTML = `Error: ${error.message}<br>Stack: ${error.stack}`;
+                
+                // Also update the P/L display with error
+                document.getElementById('plDisplay').innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
+            }
+        }
+        
+        // Initialize chart when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing chart...');
+            
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js not loaded');
+                document.getElementById('plDisplay').innerHTML = '<span style="color: red;">Error: Chart.js library not loaded</span>';
+                document.getElementById('debug').style.display = 'block';
+                document.getElementById('debug').innerHTML = 'Error: Chart.js library not loaded. Please check your internet connection.';
+                return;
+            }
+            
+            console.log('Chart.js loaded, version:', Chart.version);
+            updateChart();
+        });
+    </script>
+</body>
+</html>
