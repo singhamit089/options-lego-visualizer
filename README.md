@@ -30,6 +30,17 @@ This tool was created to help visualize the concepts taught in the video. Use it
 - **Dynamic Scaling**: Y-axis automatically adjusts to your position size
 - **Reset Functionality**: Individual and master reset buttons
 
+## 📸 Screenshots
+
+### Long Call Strategy
+![Long Call](screenshots/long-call.png)
+
+### Synthetic Stock Position
+![Synthetic Stock](screenshots/synthetic-stock.png)
+
+### Covered Call Strategy
+![Covered Call](screenshots/covered-call.png)
+
 ## 💡 Quick Examples from the Video
 
 ### 1. Hockey Stick (Long Call)
